@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Daily prices at Sam’s Club fuel centers.">
+  <title>Sam’s Club Fuel Prices</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Sam’s Club Fuel Prices</h1>
+    <div class="lookup">
+      <label class="visually-hidden" for="search">Find a fuel center</label>
+      <span class="magnifier" aria-hidden="true"></span>
+      <input id="search" type="search" placeholder="Search city, state, address, ZIP, or club number" autocomplete="off" aria-controls="results" aria-expanded="false" aria-haspopup="true" disabled>
+      <ul id="results" aria-label="Fuel centers" hidden></ul>
+    </div>
+    <section id="panel" aria-labelledby="location" hidden>
+      <div class="panel-top">
+        <div>
+          <h2 id="location"></h2>
+          <p id="address"></p>
+        </div>
+        <span id="count"></span>
+      </div>
+      <ul id="legend" aria-label="Latest recorded prices"></ul>
+      <div class="plot">
+        <svg id="chart" role="img"></svg>
+        <div id="price-tooltip" hidden></div>
+        <p id="empty" hidden>No prices recorded yet.</p>
+      </div>
+      <div class="panel-bottom">
+        <span id="unit">USD per gallon</span>
+        <a id="source">Sam’s Club source</a>
+      </div>
+    </section>
+    <p id="status" role="status"></p>
+  </main>
+</body>
+</html>
