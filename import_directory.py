@@ -53,6 +53,7 @@ def main():
                     "id": club, "city": place, "address": old.get("address", place),
                     "url": fuel.get(club, club_url + "/fuel-center"),
                     "clubUrl": club_url, "publishedFuelPage": club in fuel,
+                    **{key: old[key] for key in ("latitude", "longitude") if key in old},
                 }
     if not entries:
         raise ValueError("The official directory contained no club listings")

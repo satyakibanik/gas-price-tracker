@@ -45,3 +45,12 @@ a { color: #1254af; text-underline-offset: 3px; }
   font-size: .875rem;
   box-shadow: 0 3px 12px #15273b30;
 }
+
+.view-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.view-tabs a { padding: 5px 13px; border-radius: 8px; text-decoration: none; }
+.view-tabs a[aria-current="page"] { color: #fff; background: #15273b; }
+.map-page { max-width: 1160px; }
+#map-status { margin-bottom: 10px; color: #52647a; font-size: .875rem; }
+#fuel-map { height: clamp(360px, 67vh, 760px); border: 1px solid #d9e2ec; border-radius: 12px; background: #e4edf4; }
+.map-popup-prices { margin: 8px 0; }
+.map-popup-tracker { display: block; margin-bottom: 4px; }

@@ -242,7 +242,8 @@ try {
   search.parentElement.addEventListener('focusout', event => {
     if (!search.parentElement.contains(event.relatedTarget)) closeResults();
   });
-  select(locations[0]);
+  const requestedClub = new URLSearchParams(window.location.search).get('club');
+  select(locations.find(location => location.id === requestedClub) ?? locations[0]);
   new ResizeObserver(draw).observe(chart.parentElement);
 } catch (error) {
   byId('status').textContent = 'Fuel price data could not be loaded.';
