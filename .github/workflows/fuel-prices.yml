@@ -47,6 +47,14 @@ jobs:
           path: dist
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Smoke test deployed dashboard
+        env:
+          DASHBOARD_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dashboard-test"
+          "$RUNNER_TEMP/dashboard-test/bin/pip" install playwright
+          "$RUNNER_TEMP/dashboard-test/bin/playwright" install --with-deps chromium
+          "$RUNNER_TEMP/dashboard-test/bin/python" tests/dashboard_smoke.py "$DASHBOARD_URL"
       - name: Report incomplete collection
         if: steps.collect.outcome == 'failure'
         run: exit 1
