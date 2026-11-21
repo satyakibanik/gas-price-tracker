@@ -19,7 +19,7 @@ PRICE = re.compile(
 )
 
 
-def collect(pages=None, checked=None):
+def collect(pages=None, checked=None, refresh=False):
     date = datetime.now(EASTERN).date().isoformat()
     history = json.loads(HISTORY.read_text()) if HISTORY.exists() else {}
     checked = checked if checked is not None else set()
@@ -30,7 +30,7 @@ def collect(pages=None, checked=None):
         days = history.get(club, {})
         if (date, club) in checked:
             continue
-        if date in days and pages is None:
+        if date in days and pages is None and not refresh:
             continue
         try:
             if pages is None:
@@ -84,10 +84,11 @@ if __name__ == "__main__":
     options = parser.add_mutually_exclusive_group()
     options.add_argument("--watch", action="store_true", help="Check for a new day every hour")
     options.add_argument("--pages", type=Path, help="Import official HTML saved today from this directory")
+    parser.add_argument("--refresh", action="store_true", help="Refresh today’s recorded prices")
     args = parser.parse_args()
     checked = set()
     while True:
-        failed = collect(args.pages, checked)
+        failed = collect(args.pages, checked, refresh=args.refresh)
         if not args.watch:
             sys.exit(int(failed))
         time.sleep(3600)

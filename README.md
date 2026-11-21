@@ -23,4 +23,4 @@ python3 import_directory.py directory.html sitemap_locators.xml sitemap_hyperloc
 
 ## GitHub Pages
 
-The **Fuel prices and GitHub Pages** workflow publishes the dashboard from `dist` on pushes to `main`. It collects prices daily at 13:23 UTC, commits any new observations, and deploys the updated dashboard. Use **Run workflow** in the Actions tab to collect and deploy on demand.
+The **Fuel prices and GitHub Pages** workflow publishes the dashboard from `dist` on pushes to `main`. It collects prices every two hours at 23 minutes past the hour UTC. Each successful fetch refreshes that club’s observation for the current Eastern date. If collection fails, the workflow waits five minutes and retries once. The next scheduled run tries again if failures persist. The workflow commits any updated observations and deploys the dashboard. Use **Run workflow** in the Actions tab to collect and deploy on demand.
