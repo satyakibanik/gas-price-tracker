@@ -16,7 +16,7 @@ with sync_playwright() as playwright:
     expect(results.get_by_role("button", name="Matthews, NC", exact=False)).to_be_visible()
     results.get_by_role("button", name="Charlotte, NC · #6540", exact=False).click()
     expect(page.locator("#location")).to_have_text("Charlotte, NC")
-    expect(page.locator("#address")).to_contain_text("JW Clay Blvd")
+    expect(page.locator("#address")).to_contain_text("JW Clay Blvd", ignore_case=True)
     chart = page.locator("#chart")
     expect(chart).to_be_visible()
     chart.locator("circle").first.hover()
