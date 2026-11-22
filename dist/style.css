@@ -54,3 +54,9 @@ a { color: #1254af; text-underline-offset: 3px; }
 #fuel-map { height: clamp(360px, 67vh, 760px); border: 1px solid #d9e2ec; border-radius: 12px; background: #e4edf4; }
 .map-popup-prices { margin: 8px 0; }
 .map-popup-tracker { display: block; margin-bottom: 4px; }
+#chart line { pointer-events: none; }
+.price-update { color: #52647a; font-size: .875rem; margin: 0 0 16px; }
+.fuel-price-pin { border: 2px solid white; border-radius: 50%; box-shadow: 0 1px 4px #15273b80; }
+.price-legend { background: white; color: #15273b; border-radius: 8px; padding: 8px 12px; box-shadow: 0 1px 6px #15273b40; }
+.price-legend li { display: flex; align-items: center; gap: 6px; }
+.price-legend li span { width: 10px; height: 10px; border-radius: 50%; }

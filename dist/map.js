@@ -1,3 +1,33 @@
+const unleadedScale = [
+  [3000, '#187b50', 'Under $3.00'],
+  [3500, '#73a62e', '$3.00 to under $3.50'],
+  [4000, '#d29a12', '$3.50 to under $4.00'],
+  [4500, '#d06621', '$4.00 to under $4.50'],
+  [Infinity, '#ad3042', '$4.50 and up'],
+];
+const missingUnleaded = '#64748b';
+
+function addPriceLegend(map) {
+  const legend = L.control({ position: 'bottomleft' });
+  legend.onAdd = () => {
+    const container = L.DomUtil.create('div', 'price-legend');
+    const title = document.createElement('strong');
+    title.textContent = 'Latest unleaded price / gal';
+    const list = document.createElement('ul');
+    for (const [, color, label] of [...unleadedScale, [null, missingUnleaded, 'No recorded price']]) {
+      const row = document.createElement('li');
+      const swatch = document.createElement('span');
+      swatch.style.backgroundColor = color;
+      row.append(swatch, label);
+      list.append(row);
+    }
+    container.append(title, list);
+    L.DomEvent.disableClickPropagation(container);
+    return container;
+  };
+  legend.addTo(map);
+}
+
 function showPopupPrices(container, history, today) {
   const latest = Object.keys(history ?? {}).sort().at(-1);
   if (!latest) {
@@ -33,6 +63,7 @@ async function showFuelCenters() {
       if (!response.ok) throw new Error('Price history unavailable');
       return response.json();
     }).catch(() => null);
+    const records = await history;
 
     container.hidden = false;
     const map = L.map(container, { scrollWheelZoom: true });
@@ -41,7 +72,8 @@ async function showFuelCenters() {
       maxZoom: 19,
     }).addTo(map);
 
-    const markers = [];
+    addPriceLegend(map);
+    map.fitBounds(mapped.map(club => [club.latitude, club.longitude]), { padding: [28, 28], maxZoom: 13 });
     for (const club of mapped) {
       const coordinates = [club.latitude, club.longitude];
       const popup = document.createElement('div');
@@ -59,18 +91,20 @@ async function showFuelCenters() {
       tracker.textContent = 'View price history';
       tracker.className = 'map-popup-tracker';
       popup.append(heading, address, prices, tracker, source);
-      const marker = L.marker(coordinates, { alt: club.address, title: club.address });
+      const clubHistory = records?.[club.id] ?? {};
+      const latestUnleaded = Object.keys(clubHistory).sort().reverse()
+        .find(date => Number.isFinite(clubHistory[date].unleaded));
+      const price = clubHistory[latestUnleaded]?.unleaded;
+      const color = unleadedScale.find(([limit]) => price < limit)?.[1] ?? missingUnleaded;
+      const icon = L.divIcon({ className: 'fuel-price-pin', iconSize: [13, 13] });
+      const marker = L.marker(coordinates, { title: club.address, icon });
       marker.bindPopup(popup).addTo(map);
-      marker.on('popupopen', async event => {
-        prices.textContent = 'Loading fuel prices…';
-        const records = await history;
-        if (records) showPopupPrices(prices, records[club.id], today);
-        else prices.textContent = 'Fuel prices could not load.';
-        event.popup.update();
-      });
-      markers.push(coordinates);
+      const markerElement = marker.getElement();
+      markerElement.style.backgroundColor = color;
+      markerElement.setAttribute('aria-label', club.address);
+      if (records) showPopupPrices(prices, records[club.id], today);
+      else prices.textContent = 'Fuel prices could not load.';
     }
-    map.fitBounds(markers, { padding: [28, 28], maxZoom: 13 });
     status.textContent = `${mapped.length} of ${fuelCenters.length} fuel centers on the map`;
   } catch (error) {
     container.hidden = true;
