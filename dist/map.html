@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
   <script defer src="map.js"></script>
+  <script defer src="price-update.js"></script>
 </head>
 <body>
   <main class="map-page">
@@ -16,6 +17,7 @@
       <a href="./">Prices</a>
       <a href="map.html" aria-current="page">Map</a>
     </nav>
+    <p class="price-update" id="price-update">Price update time unavailable</p>
     <p id="map-status" role="status">Loading fuel centers…</p>
     <div id="fuel-map" aria-label="Map of Sam’s Club fuel centers" hidden></div>
   </main>

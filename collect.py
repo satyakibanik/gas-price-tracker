@@ -24,6 +24,7 @@ def collect(pages=None, checked=None, refresh=False):
     history = json.loads(HISTORY.read_text()) if HISTORY.exists() else {}
     checked = checked if checked is not None else set()
     failed = False
+    recorded = False
     checked.intersection_update({(day, club) for day, club in checked if day == date})
     for location in json.loads((SITE / "locations.json").read_text()):
         club = location["id"]
@@ -59,6 +60,7 @@ def collect(pages=None, checked=None, refresh=False):
             checked.add((date, club))
             if not prices:
                 continue
+            recorded = True
             history.setdefault(club, {})[date] = prices
             print(f"{date} {club} {prices}", flush=True)
         except HTTPError as error:
@@ -76,6 +78,11 @@ def collect(pages=None, checked=None, refresh=False):
     temporary = HISTORY.with_suffix(".tmp")
     temporary.write_text(json.dumps(history, indent=2) + "\n")
     temporary.replace(HISTORY)
+    if recorded:
+        metadata = SITE / "price-update.json"
+        temporary = metadata.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"updatedAt": datetime.now(EASTERN).isoformat(timespec="seconds")}) + "\n")
+        temporary.replace(metadata)
     return failed
 
 
