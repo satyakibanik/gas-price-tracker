@@ -73,7 +73,7 @@ async function showFuelCenters() {
     }).addTo(map);
 
     addPriceLegend(map);
-    const markers = [];
+    map.fitBounds(mapped.map(club => [club.latitude, club.longitude]), { padding: [28, 28], maxZoom: 13 });
     for (const club of mapped) {
       const coordinates = [club.latitude, club.longitude];
       const popup = document.createElement('div');
@@ -104,9 +104,7 @@ async function showFuelCenters() {
       markerElement.setAttribute('aria-label', club.address);
       if (records) showPopupPrices(prices, records[club.id], today);
       else prices.textContent = 'Fuel prices could not load.';
-      markers.push(coordinates);
     }
-    map.fitBounds(markers, { padding: [28, 28], maxZoom: 13 });
     status.textContent = `${mapped.length} of ${fuelCenters.length} fuel centers on the map`;
   } catch (error) {
     container.hidden = true;
