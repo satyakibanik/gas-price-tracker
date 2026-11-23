@@ -1,31 +1,35 @@
-const unleadedScale = [
-  [3000, '#187b50', 'Under $3.00'],
-  [3500, '#73a62e', '$3.00 to under $3.50'],
-  [4000, '#d29a12', '$3.50 to under $4.00'],
-  [4500, '#d06621', '$4.00 to under $4.50'],
-  [Infinity, '#ad3042', '$4.50 and up'],
-];
-const missingUnleaded = '#64748b';
+const priceColors = ['#187b50', '#73a62e', '#d29a12', '#d06621', '#ad3042'];
+const missingPriceColor = '#64748b';
+const priceLabel = price => '$' + (price / 1000).toFixed(3);
 
-function addPriceLegend(map) {
-  const legend = L.control({ position: 'bottomleft' });
-  legend.onAdd = () => {
-    const container = L.DomUtil.create('div', 'price-legend');
-    const title = document.createElement('strong');
-    title.textContent = 'Latest unleaded price / gal';
-    const list = document.createElement('ul');
-    for (const [, color, label] of [...unleadedScale, [null, missingUnleaded, 'No recorded price']]) {
-      const row = document.createElement('li');
-      const swatch = document.createElement('span');
-      swatch.style.backgroundColor = color;
-      row.append(swatch, label);
-      list.append(row);
-    }
-    container.append(title, list);
-    L.DomEvent.disableClickPropagation(container);
-    return container;
-  };
-  legend.addTo(map);
+function priceScale(prices, maximum) {
+  if (!prices.length) return [];
+  const low = Math.min(...prices);
+  const high = Math.max(...prices);
+  if (low === high) return [[Infinity, priceColors[0], priceLabel(low)]];
+  const step = Math.ceil((high - low + 1) / priceColors.length);
+  return priceColors.flatMap((color, index) => {
+    const start = low + step * index;
+    const end = Math.min(high, start + step - 1, maximum);
+    if (start > end) return [];
+    return [[end, color, start === end ? priceLabel(start) : `${priceLabel(start)}–${priceLabel(end)}`]];
+  });
+}
+
+function paintLegend(container, grade, scale, missing) {
+  const title = document.createElement('strong');
+  title.textContent = grade + ' price / gal';
+  const list = document.createElement('ul');
+  const entries = missing ? [...scale, [null, missingPriceColor, 'No recorded price']] : scale;
+  for (const [, color, label] of entries) {
+    const row = document.createElement('li');
+    const swatch = document.createElement('span');
+    swatch.style.backgroundColor = color;
+    row.append(swatch, label);
+    list.append(row);
+  }
+  container.replaceChildren(title, list);
+  container.hidden = !entries.length;
 }
 
 function showPopupPrices(container, history, today) {
@@ -75,7 +79,27 @@ async function showFuelCenters() {
       maxZoom: 19,
     }).addTo(map);
 
-    addPriceLegend(map);
+    const filters = document.getElementById('map-filters');
+    const gradeInput = document.getElementById('map-grade');
+    const maximumInput = document.getElementById('map-max');
+    const todayInput = document.getElementById('map-today');
+    const stateInputs = document.getElementById('map-states');
+    const stateOf = club => club.city.split(', ').at(-1);
+    for (const state of [...new Set(mapped.map(stateOf))].sort()) {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = state;
+      label.append(input, state);
+      stateInputs.append(label);
+    }
+
+    const legend = L.control({ position: 'bottomleft' });
+    const legendContent = L.DomUtil.create('div', 'price-legend');
+    legend.onAdd = () => legendContent;
+    L.DomEvent.disableClickPropagation(legendContent);
+    legend.addTo(map);
+    const pins = [];
     map.fitBounds(mapped.map(club => [club.latitude, club.longitude]), { padding: [28, 28], maxZoom: 13 });
     for (const club of mapped) {
       const coordinates = [club.latitude, club.longitude];
@@ -95,20 +119,43 @@ async function showFuelCenters() {
       tracker.className = 'map-popup-tracker';
       popup.append(heading, address, prices, tracker, source);
       const clubHistory = records?.[club.id] ?? {};
-      const latestUnleaded = Object.keys(clubHistory).sort().reverse()
-        .find(date => Number.isFinite(clubHistory[date].unleaded));
-      const price = clubHistory[latestUnleaded]?.unleaded;
-      const color = unleadedScale.find(([limit]) => price < limit)?.[1] ?? missingUnleaded;
       const icon = L.divIcon({ className: 'fuel-price-pin', iconSize: [13, 13] });
-      const marker = L.marker(coordinates, { title: club.address, icon });
-      marker.bindPopup(popup).addTo(map);
-      const markerElement = marker.getElement();
-      markerElement.style.backgroundColor = color;
-      markerElement.setAttribute('aria-label', club.address);
+      const marker = L.marker(coordinates, { title: club.address, icon }).bindPopup(popup);
+      pins.push({ club, clubHistory, marker });
       if (records) showPopupPrices(prices, records[club.id], today);
       else prices.textContent = 'Fuel prices could not load.';
     }
-    status.textContent = `${mapped.length} of ${fuelCenters.length} fuel centers on the map`;
+    function renderFilters() {
+      const grade = gradeInput.value;
+      const maximum = maximumInput.value === '' ? Infinity : Math.round(Number(maximumInput.value) * 1000);
+      const states = new Set(Array.from(stateInputs.querySelectorAll(':checked'), input => input.value));
+      const visible = [];
+      for (const pin of pins) {
+        const { club, clubHistory, marker } = pin;
+        const date = todayInput.checked ? today : Object.keys(clubHistory).sort().reverse()
+          .find(day => Number.isFinite(clubHistory[day][grade]));
+        const price = clubHistory[date]?.[grade];
+        const hasPrice = Number.isFinite(price);
+        if ((states.size && !states.has(stateOf(club))) ||
+            ((todayInput.checked || maximum !== Infinity) && (!hasPrice || price > maximum))) {
+          marker.remove();
+          continue;
+        }
+        visible.push({ pin, price });
+      }
+      const scale = priceScale(visible.map(item => item.price).filter(Number.isFinite), maximum);
+      for (const { pin, price } of visible) {
+        const element = pin.marker.addTo(map).getElement();
+        element.style.backgroundColor = scale.find(([limit]) => price <= limit)?.[1] ?? missingPriceColor;
+        element.setAttribute('aria-label', pin.club.address);
+      }
+      paintLegend(legendContent, gradeInput.selectedOptions[0].textContent, scale, visible.some(item => !Number.isFinite(item.price)));
+      status.textContent = `${visible.length} of ${fuelCenters.length} fuel centers on the map`;
+    }
+    filters.addEventListener('input', renderFilters);
+    filters.addEventListener('reset', () => requestAnimationFrame(renderFilters));
+    filters.addEventListener('submit', event => event.preventDefault());
+    renderFilters();
   } catch (error) {
     container.hidden = true;
     status.textContent = 'The fuel center map could not load.';
