@@ -9,6 +9,10 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -37,15 +41,18 @@ jobs:
           PY
       - name: Test collector with saved pages
         run: python3 -B -m unittest discover -s tests
-      - name: Install Chromium test dependencies
+      - name: Install browser test dependencies
         run: |
           python3 -m venv "$RUNNER_TEMP/dashboard-test"
           "$RUNNER_TEMP/dashboard-test/bin/pip" install playwright
-          "$RUNNER_TEMP/dashboard-test/bin/playwright" install --with-deps chromium
-      - name: Test dashboard in Chromium
+          "$RUNNER_TEMP/dashboard-test/bin/playwright" install --with-deps "${{ matrix.browser }}"
+      - name: Test dashboard and search
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 --directory dist &
           server=$!
           trap 'kill "$server"' EXIT
           curl --retry 5 --retry-connrefused -fsS http://127.0.0.1:8765/ -o /dev/null
-          "$RUNNER_TEMP/dashboard-test/bin/python" tests/dashboard_smoke.py http://127.0.0.1:8765/
+          "$RUNNER_TEMP/dashboard-test/bin/python" tests/search_browser.py http://127.0.0.1:8765/ "${{ matrix.browser }}"
+          if [ "${{ matrix.browser }}" = chromium ]; then
+            "$RUNNER_TEMP/dashboard-test/bin/python" tests/dashboard_smoke.py http://127.0.0.1:8765/
+          fi
