@@ -192,13 +192,12 @@ function showResults() {
     const searchable = tokens(`Sams Sam's Club fuel center ${location.id} ${location.city} ${location.address} ${state}`);
     if (!terms.every(term => searchable.some(word => word.startsWith(term)))) continue;
     const listItem = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
+    const link = document.createElement('a');
+    link.href = './?' + new URLSearchParams({ club: location.id });
     const address = document.createElement('small');
     address.textContent = location.address === location.city ? '' : location.address;
-    button.append(`${location.city} · #${location.id}`, address);
-    button.addEventListener('click', () => select(location));
-    listItem.append(button);
+    link.append(`${location.city} · #${location.id}`, address);
+    listItem.append(link);
     results.append(listItem);
   }
   if (!results.children.length) {
@@ -231,10 +230,10 @@ try {
     if (event.key === 'ArrowDown' && event.target === search) {
       event.preventDefault();
       showResults();
-      results.querySelector('button')?.focus();
+      results.querySelector('a')?.focus();
     }
     if (event.key === 'Enter' && event.target === search && !results.hidden) {
-      results.querySelector('button')?.click();
+      results.querySelector('a')?.click();
     }
   });
   function dismissOutside(event) {

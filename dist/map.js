@@ -38,7 +38,10 @@ function showPopupPrices(container, history, today) {
   const heading = document.createElement('strong');
   heading.textContent = date === today ? 'Today’s prices' : `Latest recorded prices (${date})`;
   const list = document.createElement('ul');
-  for (const [grade, price] of Object.entries(history[date])) {
+  const prices = history[date];
+  for (const grade of ['unleaded', 'premium', 'diesel', 'midgrade']) {
+    const price = prices[grade];
+    if (!Number.isFinite(price)) continue;
     const row = document.createElement('li');
     row.textContent = `${grade[0].toUpperCase() + grade.slice(1)} · $${(price / 1000).toFixed(3)}/gal`;
     list.append(row);

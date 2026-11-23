@@ -12,9 +12,9 @@ with sync_playwright() as playwright:
     search = page.get_by_role("searchbox", name="Find a fuel center")
     search.fill("North Carolina")
     results = page.locator("#results")
-    expect(results.get_by_role("button", name="Charlotte, NC · #6540", exact=False)).to_be_visible()
-    expect(results.get_by_role("button", name="Matthews, NC", exact=False)).to_be_visible()
-    results.get_by_role("button", name="Charlotte, NC · #6540", exact=False).click()
+    expect(results.get_by_role("link", name="Charlotte, NC · #6540", exact=False)).to_be_visible()
+    expect(results.get_by_role("link", name="Matthews, NC", exact=False)).to_be_visible()
+    results.get_by_role("link", name="Charlotte, NC · #6540", exact=False).click()
     expect(page.locator("#location")).to_have_text("Charlotte, NC")
     expect(page.locator("#address")).to_contain_text("JW Clay Blvd", ignore_case=True)
     chart = page.locator("#chart")
@@ -38,7 +38,9 @@ with sync_playwright() as playwright:
     # Pins overlap at national zoom, so dispatch the click on the selected pin.
     marker.dispatch_event("click")
     popup = page.locator(".leaflet-popup")
-    expect(popup).to_contain_text("Unleaded")
+    grades = [row.split(" · ")[0] for row in popup.locator(".map-popup-prices li").all_text_contents()]
+    assert "Unleaded" in grades
+    assert grades == [grade for grade in ("Unleaded", "Premium", "Diesel", "Midgrade") if grade in grades]
     expect(popup.get_by_role("link", name="View price history")).to_have_attribute("href", "./?club=6540")
     popup.get_by_role("link", name="View price history").click()
     expect(page.locator("#location")).to_have_text("Charlotte, NC")
