@@ -72,7 +72,11 @@ a { color: #1254af; text-underline-offset: 3px; }
 }
 .map-filters input[type=checkbox] { min-height: auto; width: auto; }
 .map-filters .map-check, #map-states label { display: flex; align-items: center; gap: 6px; }
-#map-states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; padding: 8px; max-height: 180px; overflow: auto; }
+.state-dropdown { position: relative; }
+.state-dropdown summary { cursor: pointer; background: white; border: 1px solid #d9e2ec; border-radius: 8px; padding: 7px 10px; }
+#map-states { position: absolute; top: calc(100% + 4px); left: 0; z-index: 1100; min-width: 100%; width: max-content; padding: 8px; max-height: 240px; overflow: auto; background: white; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 3px 12px #15273b30; }
+#map-states label { padding: 5px 8px; }
+
 .map-filters button, .trip-form button { min-height: 40px; padding: 6px 12px; border: 1px solid #d9e2ec; border-radius: 8px; background: white; color: inherit; font: inherit; cursor: pointer; }
 .trip-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); gap: 12px; margin: 12px 0; }
 .trip-comparison section { padding: 16px; }

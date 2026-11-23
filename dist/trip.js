@@ -4,7 +4,9 @@ const status = document.getElementById('trip-status');
 const comparison = document.getElementById('trip-comparison');
 const mapContainer = document.getElementById('trip-map');
 const submit = form.querySelector('button');
+const keyInput = document.getElementById('trip-key');
 let tripMap;
+window.addEventListener('pagehide', () => { keyInput.value = ''; });
 
 async function readJson(url, options) {
   const response = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
@@ -95,7 +97,8 @@ function drawRoutes(direct, stop) {
 form.addEventListener('submit', async event => {
   event.preventDefault();
   const values = new FormData(form);
-  const key = document.getElementById('trip-key').value.trim();
+  const key = keyInput.value.trim();
+  keyInput.value = '';
   const maximumSeconds = Number(values.get('detour')) * 60;
   submit.disabled = true;
   comparison.hidden = true;

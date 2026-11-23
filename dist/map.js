@@ -1,3 +1,5 @@
+import { stateNames } from './state-names.js';
+
 const priceColors = ['#187b50', '#73a62e', '#d29a12', '#d06621', '#ad3042'];
 const missingPriceColor = '#64748b';
 const priceLabel = price => '$' + (price / 1000).toFixed(3);
@@ -85,12 +87,15 @@ async function showFuelCenters() {
     const todayInput = document.getElementById('map-today');
     const stateInputs = document.getElementById('map-states');
     const stateOf = club => club.city.split(', ').at(-1);
-    for (const state of [...new Set(mapped.map(stateOf))].sort()) {
+    const nameOf = state => stateNames[state] ?? state;
+    const statesByName = [...new Set(mapped.map(stateOf))]
+      .sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'en'));
+    for (const state of statesByName) {
       const label = document.createElement('label');
       const input = document.createElement('input');
       input.type = 'checkbox';
       input.value = state;
-      label.append(input, state);
+      label.append(input, nameOf(state));
       stateInputs.append(label);
     }
 
@@ -125,10 +130,22 @@ async function showFuelCenters() {
       if (records) showPopupPrices(prices, records[club.id], today);
       else prices.textContent = 'Fuel prices could not load.';
     }
+    const stateDropdown = stateInputs.closest('details');
+    document.addEventListener('click', event => {
+      if (!stateDropdown.contains(event.target)) stateDropdown.open = false;
+    });
+    stateDropdown.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      stateDropdown.open = false;
+      stateDropdown.querySelector('summary').focus();
+    });
+
     function renderFilters() {
       const grade = gradeInput.value;
       const maximum = maximumInput.value === '' ? Infinity : Math.round(Number(maximumInput.value) * 1000);
       const states = new Set(Array.from(stateInputs.querySelectorAll(':checked'), input => input.value));
+      document.getElementById('map-state-summary').textContent = states.size
+        ? `States and territories (${states.size})` : 'States and territories';
       const visible = [];
       for (const pin of pins) {
         const { club, clubHistory, marker } = pin;
@@ -150,7 +167,15 @@ async function showFuelCenters() {
         element.setAttribute('aria-label', pin.club.address);
       }
       paintLegend(legendContent, gradeInput.selectedOptions[0].textContent, scale, visible.some(item => !Number.isFinite(item.price)));
-      status.textContent = `${visible.length} of ${fuelCenters.length} fuel centers on the map`;
+      if (visible.length) {
+        status.textContent = `${visible.length} of ${fuelCenters.length} fuel centers on the map`;
+      } else if (!records) {
+        status.textContent = 'Price data could not load. Clear the price filters or try again.';
+      } else if (todayInput.checked && !pins.some(pin => Number.isFinite(pin.clubHistory[today]?.[grade]))) {
+        status.textContent = `No ${grade} prices recorded for ${today} (Eastern time) in this data.`;
+      } else {
+        status.textContent = 'No fuel centers match the selected filters.';
+      }
     }
     filters.addEventListener('input', renderFilters);
     filters.addEventListener('reset', () => requestAnimationFrame(renderFilters));
