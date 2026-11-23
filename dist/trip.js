@@ -1,8 +1,12 @@
+import { paintLegend, priceColor, priceLabel, priceScale } from './price-scale.js';
+
 const api = 'https://api.openrouteservice.org';
+const routeCorridorMiles = 10;
 const form = document.getElementById('trip-form');
 const status = document.getElementById('trip-status');
 const comparison = document.getElementById('trip-comparison');
 const mapContainer = document.getElementById('trip-map');
+const routeKey = document.getElementById('trip-map-key');
 const submit = form.querySelector('button');
 const keyInput = document.getElementById('trip-key');
 let tripMap;
@@ -74,9 +78,12 @@ function addSummary(title, route, detail) {
   return section;
 }
 
-function drawRoutes(direct, stop) {
+function drawRoutes(direct, stations, stop) {
   if (!window.L) return;
   mapContainer.hidden = false;
+  routeKey.hidden = false;
+  routeKey.textContent = stop ? 'Blue shows the direct route. Green shows the route with the recommended stop.' :
+    'Blue shows the direct route.';
   tripMap?.remove();
   tripMap = L.map(mapContainer);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -86,12 +93,46 @@ function drawRoutes(direct, stop) {
   const routes = L.featureGroup().addTo(tripMap);
   if (stop) L.geoJSON(stop.route, { style: { color: '#187b50', weight: 7 } }).addTo(routes);
   L.geoJSON(direct.route, { style: { color: '#265e9b', weight: 4, dashArray: stop ? '7 7' : null } }).addTo(routes);
-  if (stop) {
-    const label = document.createElement('span');
-    label.textContent = stop.club.address;
-    L.marker([stop.club.latitude, stop.club.longitude]).bindPopup(label).addTo(routes);
-  }
+
+  const prices = stations.flatMap(station => station.price ? [station.price.value] : []);
+  const scale = priceScale(prices, Infinity);
+  const legend = L.control({ position: 'bottomleft' });
+  const legendContent = L.DomUtil.create('div', 'price-legend');
+  paintLegend(legendContent, 'Unleaded', scale, prices.length < stations.length);
+  legend.onAdd = () => legendContent;
+  L.DomEvent.disableClickPropagation(legendContent);
+  legend.addTo(tripMap);
+
   tripMap.fitBounds(routes.getBounds(), { padding: [24, 24], maxZoom: 14 });
+  for (const { club, price } of stations) {
+    const recommended = stop?.club.id === club.id;
+    const popup = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = (recommended ? 'Recommended stop · ' : '') + 'Sam’s Club #' + club.id;
+    const address = document.createElement('div');
+    address.textContent = club.address;
+    const detail = document.createElement('div');
+    detail.textContent = price ? `Unleaded ${priceLabel(price.value)}/gal · ${price.date}` : 'No recorded unleaded price';
+    const link = document.createElement('a');
+    link.href = './?' + new URLSearchParams({ club: club.id });
+    link.textContent = 'View price history';
+    popup.append(title, address, detail, link);
+
+    const size = recommended ? 19 : 13;
+    const icon = L.divIcon({
+      className: 'fuel-price-pin trip-station' + (recommended ? ' trip-stop' : ''),
+      iconSize: [size, size],
+    });
+    const marker = L.marker([club.latitude, club.longitude], {
+      title: club.address,
+      icon,
+      zIndexOffset: recommended ? 500 : 0,
+    }).bindPopup(popup).addTo(routes);
+    const element = marker.getElement();
+    element.style.backgroundColor = priceColor(scale, price?.value);
+    element.setAttribute('aria-label', title.textContent + ', ' + club.address);
+  }
+  if (stations.length) tripMap.fitBounds(routes.getBounds(), { padding: [24, 24], maxZoom: 14 });
 }
 
 form.addEventListener('submit', async event => {
@@ -103,6 +144,7 @@ form.addEventListener('submit', async event => {
   submit.disabled = true;
   comparison.hidden = true;
   mapContainer.hidden = true;
+  routeKey.hidden = true;
   status.textContent = 'Finding the direct driving route…';
   try {
     const [start, destination, clubs, history] = await Promise.all([
@@ -113,19 +155,30 @@ form.addEventListener('submit', async event => {
     comparison.replaceChildren();
     addSummary('Direct route', direct, [start.label + ' → ' + destination.label]);
     comparison.hidden = false;
-    drawRoutes(direct);
-    const candidates = clubs.filter(club => club.publishedFuelPage &&
+    const stations = clubs.filter(club => club.publishedFuelPage &&
       Number.isFinite(club.latitude) && Number.isFinite(club.longitude))
-      .map(club => ({ club, proximity: distanceToRoute(club, direct.route.geometry.coordinates) }))
-      .sort((a, b) => a.proximity - b.proximity).slice(0, 6);
+      .map(club => ({
+        club,
+        proximity: distanceToRoute(club, direct.route.geometry.coordinates),
+        price: unleadedPrice(history[club.id]),
+      }))
+      .filter(station => station.proximity <= routeCorridorMiles * 1609.344)
+      .sort((a, b) => a.proximity - b.proximity);
+    drawRoutes(direct, stations);
+    const scope = `${stations.length} fuel centers within ${routeCorridorMiles} miles of the route.`;
+    const candidates = stations.slice(0, 6);
+    if (!candidates.length) {
+      status.textContent = scope;
+      return;
+    }
     const stops = [];
     let failed = 0;
-    for (const [index, { club }] of candidates.entries()) {
+    for (const [index, { club, price }] of candidates.entries()) {
       status.textContent = `Checking fuel stop ${index + 1} of ${candidates.length}…`;
       try {
         const stop = await directions([start.coordinates, [club.longitude, club.latitude], destination.coordinates], key);
         const extraSeconds = Math.max(0, stop.duration - direct.duration);
-        if (extraSeconds <= maximumSeconds) stops.push({ ...stop, club, extraSeconds, price: unleadedPrice(history[club.id]) });
+        if (extraSeconds <= maximumSeconds) stops.push({ ...stop, club, extraSeconds, price });
       } catch (error) {
         failed++;
       }
@@ -134,10 +187,10 @@ form.addEventListener('submit', async event => {
       a.extraSeconds - b.extraSeconds);
     const stop = stops[0];
     const checked = candidates.length - failed;
-    const context = `Compared ${checked} of ${candidates.length} nearby stops. Drive times exclude traffic and fueling.`;
+    const context = `${scope} Compared ${checked} of ${candidates.length} nearby stops. Drive times exclude traffic and fueling.`;
     if (!stop) {
       status.textContent = checked ? `No checked stop fit the detour limit. ${context}` :
-        'No detours could be checked. Try again later.';
+        `${scope} No detours could be checked. Try again later.`;
       return;
     }
     const deltaMiles = (stop.distance - direct.distance) / 1609.344;
@@ -153,7 +206,7 @@ form.addEventListener('submit', async event => {
     priceHistory.textContent = 'View price history';
     summary.append(priceHistory);
     status.textContent = (stop.price ? 'Lowest recorded unleaded price among eligible stops. ' : 'Shortest eligible detour. ') + context;
-    drawRoutes(direct, stop);
+    drawRoutes(direct, stations, stop);
   } catch (error) {
     status.textContent = error.message;
   } finally {

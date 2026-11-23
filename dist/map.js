@@ -1,38 +1,6 @@
 import { stateNames } from './state-names.js';
 
-const priceColors = ['#187b50', '#73a62e', '#d29a12', '#d06621', '#ad3042'];
-const missingPriceColor = '#64748b';
-const priceLabel = price => '$' + (price / 1000).toFixed(3);
-
-function priceScale(prices, maximum) {
-  if (!prices.length) return [];
-  const low = Math.min(...prices);
-  const high = Math.max(...prices);
-  if (low === high) return [[Infinity, priceColors[0], priceLabel(low)]];
-  const step = Math.ceil((high - low + 1) / priceColors.length);
-  return priceColors.flatMap((color, index) => {
-    const start = low + step * index;
-    const end = Math.min(high, start + step - 1, maximum);
-    if (start > end) return [];
-    return [[end, color, start === end ? priceLabel(start) : `${priceLabel(start)}–${priceLabel(end)}`]];
-  });
-}
-
-function paintLegend(container, grade, scale, missing) {
-  const title = document.createElement('strong');
-  title.textContent = grade + ' price / gal';
-  const list = document.createElement('ul');
-  const entries = missing ? [...scale, [null, missingPriceColor, 'No recorded price']] : scale;
-  for (const [, color, label] of entries) {
-    const row = document.createElement('li');
-    const swatch = document.createElement('span');
-    swatch.style.backgroundColor = color;
-    row.append(swatch, label);
-    list.append(row);
-  }
-  container.replaceChildren(title, list);
-  container.hidden = !entries.length;
-}
+import { paintLegend, priceColor, priceScale } from './price-scale.js';
 
 function showPopupPrices(container, history, today) {
   const latest = Object.keys(history ?? {}).sort().at(-1);
@@ -163,7 +131,7 @@ async function showFuelCenters() {
       const scale = priceScale(visible.map(item => item.price).filter(Number.isFinite), maximum);
       for (const { pin, price } of visible) {
         const element = pin.marker.addTo(map).getElement();
-        element.style.backgroundColor = scale.find(([limit]) => price <= limit)?.[1] ?? missingPriceColor;
+        element.style.backgroundColor = priceColor(scale, price);
         element.setAttribute('aria-label', pin.club.address);
       }
       paintLegend(legendContent, gradeInput.selectedOptions[0].textContent, scale, visible.some(item => !Number.isFinite(item.price)));

@@ -83,3 +83,6 @@ a { color: #1254af; text-underline-offset: 3px; }
 .trip-comparison h2, .trip-comparison p { margin: 0 0 6px; }
 #trip-map { height: clamp(320px, 55vh, 640px); border-radius: 12px; overflow: hidden; }
 #trip-status, #trip-note { margin: 0 0 12px; }
+
+.trip-stop { outline: 3px solid #15273b; }
+#trip-map-key { margin: 0 0 8px; font-size: .875rem; }

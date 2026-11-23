@@ -16,7 +16,9 @@ history = {
 }
 directory = json.loads((Path(__file__).resolve().parents[1] / "dist" / "locations.json").read_text())
 route_clubs = [club for club in directory if club["id"] in history]
-coordinates = [[-76, 43], [-80, 35]]
+coordinates = [[-73.75, 42.75], [-80.84, 35.23]]
+corridor_points = [[club["longitude"], club["latitude"]] for club in route_clubs]
+off_route = next(club for club in directory if club["publishedFuelPage"] and club["city"].endswith(", CA"))
 
 
 def simulate_routing(route):
@@ -37,7 +39,7 @@ def simulate_routing(route):
         extra = 0 if len(points) == 2 else (300 if points[1][0] == route_clubs[0]["longitude"] else 900)
         feature = {
             "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": points},
+            "geometry": {"type": "LineString", "coordinates": [points[0], *corridor_points, points[-1]] if len(points) == 2 else points},
             "properties": {"summary": {"duration": 3600 + extra, "distance": 100000 + extra * 10}},
         }
     route.fulfill(json={"features": [feature]}, headers=headers)
@@ -69,7 +71,7 @@ with sync_playwright() as playwright:
     nc_count = sum(club["publishedFuelPage"] and club["city"].endswith(", NC") for club in directory)
     expect(markers).to_have_count(nc_count)
 
-    page.route("**/locations.json", lambda route: route.fulfill(json=route_clubs))
+    page.route("**/locations.json", lambda route: route.fulfill(json=[*route_clubs, off_route]))
     page.route("https://api.openrouteservice.org/**", simulate_routing)
     page.goto(url + "trip.html")
     page.get_by_label("Start", exact=True).fill("Start")
@@ -81,10 +83,23 @@ with sync_playwright() as playwright:
     expect(page.locator("#trip-comparison")).to_contain_text("5 min extra")
     expect(page.locator("#trip-comparison")).to_contain_text(route_clubs[0]["address"])
     expect(page.get_by_role("link", name="View price history")).to_have_attribute("href", "./?club=6440")
+    expect(page.locator("#trip-map .trip-station")).to_have_count(2)
+    expect(page.locator("#trip-map .trip-stop")).to_have_attribute("title", route_clubs[0]["address"])
+    expect(page.locator("#trip-map .leaflet-overlay-pane path")).to_have_count(2)
+    expect(page.locator("#trip-map .price-legend")).to_contain_text("Unleaded price / gal")
+    colors = page.locator("#trip-map .trip-station").evaluate_all(
+        "(pins) => pins.map(pin => pin.style.backgroundColor)"
+    )
+    assert len(set(colors)) == 2
+    station = page.locator("#trip-map .trip-station:not(.trip-stop)")
+    station.dispatch_event("click")
+    expect(page.locator("#trip-map .leaflet-popup")).to_contain_text("Unleaded $2.749/gal")
     expect(page.get_by_label("Openrouteservice API key")).to_have_value("")
     page.get_by_label("Openrouteservice API key").fill("test-key")
     page.get_by_label("Maximum extra driving minutes").fill("2")
     page.get_by_role("button", name="Compare routes").click()
     expect(page.get_by_role("status")).to_contain_text("No checked stop fit the detour limit")
     expect(page.get_by_role("heading", name="Via Sam’s Club")).to_have_count(0)
+    expect(page.locator("#trip-map .trip-station")).to_have_count(2)
+    expect(page.locator("#trip-map .leaflet-overlay-pane path")).to_have_count(1)
     browser.close()

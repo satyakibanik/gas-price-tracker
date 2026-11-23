@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plan a fuel stop | Sam’s Club Fuel Prices</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-  <link rel="stylesheet" href="style.css?v=trip-planner">
+  <link rel="stylesheet" href="style.css?v=route-stations">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
-  <script defer src="trip.js"></script>
+  <script type="module" src="trip.js?v=route-stations"></script>
 </head>
 <body>
   <main class="map-page">
@@ -25,6 +25,7 @@
     <p id="trip-note">Get a <a href="https://openrouteservice.org/plans/">free Openrouteservice key</a>. Your browser sends the key and trip locations directly to Openrouteservice. This page clears the key when you submit and does not save it.</p>
     <p id="trip-status" role="status"></p>
     <div id="trip-comparison" class="trip-comparison" hidden></div>
+    <p id="trip-map-key" hidden>Blue shows the direct route. Green shows the route with the recommended stop.</p>
     <div id="trip-map" aria-label="Map of the compared driving routes" hidden></div>
   </main>
 </body>
