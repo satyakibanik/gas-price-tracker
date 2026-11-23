@@ -55,4 +55,5 @@ jobs:
           "$RUNNER_TEMP/dashboard-test/bin/python" tests/search_browser.py http://127.0.0.1:8765/ "${{ matrix.browser }}"
           if [ "${{ matrix.browser }}" = chromium ]; then
             "$RUNNER_TEMP/dashboard-test/bin/python" tests/dashboard_smoke.py http://127.0.0.1:8765/
+            "$RUNNER_TEMP/dashboard-test/bin/python" tests/trip_and_filters.py http://127.0.0.1:8765/
           fi
