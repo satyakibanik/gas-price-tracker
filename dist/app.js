@@ -197,10 +197,7 @@ function showResults() {
     const address = document.createElement('small');
     address.textContent = location.address === location.city ? '' : location.address;
     button.append(`${location.city} · #${location.id}`, address);
-    button.addEventListener('click', () => {
-      search.focus();
-      select(location);
-    });
+    button.addEventListener('click', () => select(location));
     listItem.append(button);
     results.append(listItem);
   }
@@ -224,7 +221,8 @@ try {
   search.disabled = false;
   search.addEventListener('focus', showResults);
   search.addEventListener('input', showResults);
-  byId('search').parentElement.addEventListener('keydown', event => {
+  const lookup = search.parentElement;
+  lookup.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !results.hidden) {
       event.preventDefault();
       search.focus();
@@ -239,9 +237,11 @@ try {
       results.querySelector('button')?.click();
     }
   });
-  search.parentElement.addEventListener('focusout', event => {
-    if (!search.parentElement.contains(event.relatedTarget)) closeResults();
-  });
+  function dismissOutside(event) {
+    if (!lookup.contains(event.target)) closeResults();
+  }
+  document.addEventListener('click', dismissOutside);
+  document.addEventListener('focusin', dismissOutside);
   const requestedClub = new URLSearchParams(window.location.search).get('club');
   select(locations.find(location => location.id === requestedClub) ?? locations[0]);
   new ResizeObserver(draw).observe(chart.parentElement);
