@@ -85,7 +85,14 @@ with sync_playwright() as playwright:
     expect(page.get_by_role("link", name="View price history")).to_have_attribute("href", "./?club=6440")
     expect(page.locator("#trip-map .trip-station")).to_have_count(2)
     expect(page.locator("#trip-map .trip-stop")).to_have_attribute("title", route_clubs[0]["address"])
-    expect(page.locator("#trip-map .leaflet-overlay-pane path")).to_have_count(2)
+    route_overlay = page.locator("#trip-map .leaflet-overlay-pane svg")
+    expect(route_overlay.locator("path")).to_have_count(2)
+    # Leaflet sizes the SVG viewport to match its projected route geometry.
+    assert route_overlay.evaluate("""svg => {
+        const box = svg.getBoundingClientRect();
+        return Math.abs(box.width - Number(svg.getAttribute('width'))) < 1 &&
+               Math.abs(box.height - Number(svg.getAttribute('height'))) < 1;
+    }""")
     expect(page.locator("#trip-map .price-legend")).to_contain_text("Unleaded price / gal")
     colors = page.locator("#trip-map .trip-station").evaluate_all(
         "(pins) => pins.map(pin => pin.style.backgroundColor)"
