@@ -90,3 +90,12 @@ a { color: #1254af; text-underline-offset: 3px; }
 #copy-stops { padding: 7px 12px; margin-bottom: 8px; border: 1px solid #d9e2ec; border-radius: 8px; color: inherit; background: white; font: inherit; cursor: pointer; }
 #copy-status, #copy-fallback { margin-bottom: 8px; }
 #copy-fallback { display: block; width: 100%; }
+
+.trip-leg-input { display: flex; align-items: end; flex-wrap: wrap; gap: 10px 16px; margin: 0 0 12px; border: 1px solid #d9e2ec; border-radius: 10px; }
+.trip-leg-input label { display: grid; flex: 1 1 220px; gap: 4px; }
+.trip-leg-input input, .trip-leg-input button { min-height: 40px; padding: 6px 10px; border: 1px solid #d9e2ec; border-radius: 8px; font: inherit; }
+.trip-leg-input button { color: inherit; background: white; cursor: pointer; }
+.trip-leg-result { border-left: 5px solid var(--leg-color); padding-left: 12px; margin-bottom: 16px; }
+.trip-leg-result h2 { font-size: 1.1rem; }
+.trip-leg-result h3 { margin-top: 0; }
+.trip-leg-result ol { padding-left: 24px; }

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plan a fuel stop | Sam’s Club Fuel Prices</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-  <link rel="stylesheet" href="style.css?v=copy-stops">
+  <link rel="stylesheet" href="style.css?v=trip-legs">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
-  <script type="module" src="trip.js?v=copy-stops"></script>
+  <script type="module" src="trip.js?v=trip-legs"></script>
 </head>
 <body>
   <main class="map-page">
@@ -15,20 +15,29 @@
     <nav class="view-tabs" aria-label="Dashboard views">
       <a href="./">Prices</a><a href="map.html">Map</a><a href="trip.html" aria-current="page">Plan a trip</a>
     </nav>
-    <form id="trip-form" class="trip-form">
-      <label>Start <input name="start" required placeholder="Street address or city and state"></label>
-      <label>Destination <input name="destination" required placeholder="Street address or city and state"></label>
-      <label>Maximum extra driving minutes <input name="detour" type="number" min="0" max="120" value="60" required></label>
-      <label>Openrouteservice API key <input id="trip-key" type="password" autocomplete="off" required></label>
-      <button type="submit">Compare routes</button>
+    <form id="trip-form">
+      <div id="trip-legs">
+        <fieldset class="trip-leg-input">
+          <legend>Leg 1</legend>
+          <label>Start <input name="start" required placeholder="Street address or city and state"></label>
+          <label>Destination <input name="destination" required placeholder="Street address or city and state"></label>
+          <button type="button" class="remove-leg" hidden>Remove leg</button>
+        </fieldset>
+      </div>
+      <div class="trip-form">
+        <button type="button" id="add-leg">Add leg</button>
+        <label>Maximum extra driving minutes <input name="detour" type="number" min="0" max="120" value="60" required></label>
+        <label>Openrouteservice API key <input id="trip-key" type="password" autocomplete="off" required></label>
+        <button type="submit">Compare routes</button>
+      </div>
     </form>
     <p id="trip-note">Get a <a href="https://openrouteservice.org/plans/">free Openrouteservice key</a>. Your browser sends the key and trip locations directly to Openrouteservice. This page clears the key when you submit and does not save it.</p>
     <p id="trip-status" role="status"></p>
-    <div id="trip-comparison" class="trip-comparison" hidden></div>
+    <div id="trip-comparison" class="trip-results" hidden></div>
     <button type="button" id="copy-stops" hidden>Copy fuel stops</button>
     <p id="copy-status" role="status" hidden></p>
     <textarea id="copy-fallback" aria-label="Fuel stops to copy" rows="8" readonly hidden></textarea>
-    <p id="trip-map-key" hidden>Blue shows the direct route. Green shows the route with the recommended stop.</p>
+    <p id="trip-map-key" hidden></p>
     <div id="trip-map" aria-label="Map of the compared driving routes" hidden></div>
   </main>
 </body>

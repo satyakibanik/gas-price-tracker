@@ -39,7 +39,7 @@ def simulate_routing(route):
         extra = 0 if len(points) == 2 else (300 if points[1][0] == route_clubs[0]["longitude"] else 900)
         feature = {
             "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": [points[0], *corridor_points, points[-1]] if len(points) == 2 else points},
+            "geometry": {"type": "LineString", "coordinates": [points[0], *(corridor_points if points[0] == coordinates[0] else corridor_points[::-1]), points[-1]] if len(points) == 2 else points},
             "properties": {"summary": {"duration": 3600 + extra, "distance": 100000 + extra * 10}},
         }
     route.fulfill(json={"features": [feature]}, headers=headers)
@@ -124,4 +124,26 @@ with sync_playwright() as playwright:
     expect(page.get_by_role("heading", name="Via Sam’s Club")).to_have_count(0)
     expect(page.locator("#trip-map .trip-station")).to_have_count(2)
     expect(page.locator("#trip-map .leaflet-overlay-pane path")).to_have_count(1)
+    page.get_by_role("button", name="Add leg").click()
+    second_leg = page.get_by_role("group", name="Leg 2")
+    expect(second_leg.get_by_label("Start", exact=True)).to_have_value("Destination")
+    second_leg.get_by_label("Destination").fill("Start")
+    page.get_by_label("Openrouteservice API key").fill("test-key")
+    page.get_by_role("button", name="Compare routes").click()
+    expect(page.locator("#trip-status")).to_contain_text("Compared 2 of 2 legs")
+    expect(page.get_by_role("heading", name="Direct route")).to_have_count(2)
+    expect(page.get_by_text("Fuel stations (2)", exact=True)).to_have_count(2)
+    expect(page.locator("#trip-map .trip-station")).to_have_count(2)
+    route_colors = page.locator("#trip-map .leaflet-overlay-pane path").evaluate_all(
+        "(paths) => paths.map(path => path.getAttribute('stroke'))"
+    )
+    assert len(set(route_colors)) == 2
+    page.get_by_role("button", name="Copy fuel stops").click()
+    expect(page.locator("#copy-status")).to_have_text("Fuel stops copied.")
+    copied = page.evaluate("window.copiedFuelStops")
+    outward, return_trip = copied.split("Leg 2 · ")
+    assert "Leg 1 · " in outward
+    assert outward.index("#6440") < outward.index("#6540")
+    assert return_trip.index("#6540") < return_trip.index("#6440")
+    assert copied.count("mi — Sam’s Club") == 4
     browser.close()
