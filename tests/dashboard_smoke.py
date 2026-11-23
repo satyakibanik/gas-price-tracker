@@ -32,7 +32,7 @@ with sync_playwright() as playwright:
     page.get_by_role("link", name="Map", exact=True).click()
     expect(page.get_by_role("status")).to_have_text("529 of 529 fuel centers on the map")
     expect(page.locator(".leaflet-marker-icon")).to_have_count(529)
-    expect(page.locator(".price-legend")).to_contain_text("Latest unleaded price")
+    expect(page.locator(".price-legend")).to_contain_text("Unleaded price / gal")
     expect(page.locator("#price-update time")).to_be_visible()
     marker = page.locator('.leaflet-marker-icon[title="8909 JW Clay Blvd, Charlotte, NC 28262" i]')
     # Pins overlap at national zoom, so dispatch the click on the selected pin.
