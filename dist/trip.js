@@ -39,11 +39,12 @@ async function directions(coordinates, key) {
   return { route, ...route.properties.summary };
 }
 
-// Approximate distance to the route is used only to shortlist stops.
-// The routing service determines the actual detour by road.
-function distanceToRoute(club, coordinates) {
+// Project each station onto the route and scale progress to the reported road distance.
+function routePosition(club, coordinates, routeDistance) {
   const longitudeScale = Math.cos(club.latitude * Math.PI / 180);
   let minimum = Infinity;
+  let distance = 0;
+  let progress = 0;
   for (let index = 1; index < coordinates.length; index++) {
     const [left, right] = [coordinates[index - 1], coordinates[index]];
     const x = (left[0] - club.longitude) * longitudeScale;
@@ -52,10 +53,48 @@ function distanceToRoute(club, coordinates) {
     const dy = right[1] - left[1];
     const length = dx * dx + dy * dy;
     const portion = length ? Math.max(0, Math.min(1, -(x * dx + y * dy) / length)) : 0;
-    minimum = Math.min(minimum, Math.hypot(x + portion * dx, y + portion * dy));
+    const offset = Math.hypot(x + portion * dx, y + portion * dy);
+    const segment = Math.sqrt(length);
+    if (offset < minimum) {
+      minimum = offset;
+      progress = distance + portion * segment;
+    }
+    distance += segment;
   }
-  return minimum * 111195;
+  return {
+    proximity: minimum * 111195,
+    fromStart: distance ? progress / distance * routeDistance : 0,
+  };
 }
+
+const copyStops = document.getElementById('copy-stops');
+const copyStatus = document.getElementById('copy-status');
+const copyFallback = document.getElementById('copy-fallback');
+let stopList = '';
+
+function prepareStopList(stations) {
+  if (!stations.length) return;
+  const rows = [...stations].sort((a, b) => a.fromStart - b.fromStart).map(({ club, price, fromStart }) => {
+    const fuel = price ? `Unleaded ${priceLabel(price.value)}/gal` : 'Unleaded price unavailable';
+    return `${(fromStart / 1609.344).toFixed(1)} mi — Sam’s Club #${club.id} — ${club.address} — ${fuel}`;
+  });
+  stopList = ['Sam’s Club fuel stops', 'Estimated route miles from the start, excluding station detours.', '', ...rows].join('\n');
+  copyStops.hidden = false;
+}
+
+copyStops.addEventListener('click', async () => {
+  copyStatus.hidden = false;
+  try {
+    await navigator.clipboard.writeText(stopList);
+    copyFallback.hidden = true;
+    copyStatus.textContent = 'Fuel stops copied.';
+  } catch {
+    copyFallback.value = stopList;
+    copyFallback.hidden = false;
+    copyFallback.select();
+    copyStatus.textContent = 'Select and copy the fuel stop list below.';
+  }
+});
 
 function unleadedPrice(records) {
   const date = Object.keys(records ?? {}).sort().reverse().find(day => Number.isFinite(records[day].unleaded));
@@ -145,6 +184,10 @@ form.addEventListener('submit', async event => {
   comparison.hidden = true;
   mapContainer.hidden = true;
   routeKey.hidden = true;
+  copyStops.hidden = true;
+  copyStatus.hidden = true;
+  copyFallback.hidden = true;
+  stopList = '';
   status.textContent = 'Finding the direct driving route…';
   try {
     const [start, destination, clubs, history] = await Promise.all([
@@ -159,11 +202,12 @@ form.addEventListener('submit', async event => {
       Number.isFinite(club.latitude) && Number.isFinite(club.longitude))
       .map(club => ({
         club,
-        proximity: distanceToRoute(club, direct.route.geometry.coordinates),
+        ...routePosition(club, direct.route.geometry.coordinates, direct.distance),
         price: unleadedPrice(history[club.id]),
       }))
       .filter(station => station.proximity <= routeCorridorMiles * 1609.344)
       .sort((a, b) => a.proximity - b.proximity);
+    prepareStopList(stations);
     drawRoutes(direct, stations);
     const scope = `${stations.length} fuel centers within ${routeCorridorMiles} miles of the route.`;
     const candidates = stations.slice(0, 6);

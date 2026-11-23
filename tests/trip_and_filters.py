@@ -48,6 +48,9 @@ def simulate_routing(route):
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch()
     page = browser.new_page()
+    page.add_init_script("""Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: async text => { window.copiedFuelStops = text; } }
+    });""")
     page.route("**/prices.json", lambda route: route.fulfill(json=history))
     page.goto(url + "map.html")
     markers = page.locator(".fuel-price-pin")
@@ -87,6 +90,15 @@ with sync_playwright() as playwright:
     expect(page.locator("#trip-comparison")).to_contain_text(route_clubs[0]["address"])
     expect(page.get_by_role("link", name="View price history")).to_have_attribute("href", "./?club=6440")
     expect(page.locator("#trip-map .trip-station")).to_have_count(2)
+    page.get_by_role("button", name="Copy fuel stops").click()
+    expect(page.locator("#copy-status")).to_have_text("Fuel stops copied.")
+    copied = page.evaluate("window.copiedFuelStops")
+    stops = [row for row in copied.splitlines() if "mi — Sam’s Club" in row]
+    assert len(stops) == 2
+    assert "Sam’s Club #6440" in stops[0] and route_clubs[0]["address"] in stops[0] and "$3.759/gal" in stops[0]
+    assert "Sam’s Club #6540" in stops[1] and "$2.749/gal" in stops[1]
+    distances = [float(row.split()[0]) for row in stops]
+    assert distances[0] < distances[1]
     expect(page.locator("#trip-map .trip-stop")).to_have_attribute("title", route_clubs[0]["address"])
     route_overlay = page.locator("#trip-map .leaflet-overlay-pane svg")
     expect(route_overlay.locator("path")).to_have_count(2)

@@ -86,3 +86,7 @@ a { color: #1254af; text-underline-offset: 3px; }
 
 .trip-stop { outline: 3px solid #15273b; }
 #trip-map-key { margin: 0 0 8px; font-size: .875rem; }
+
+#copy-stops { padding: 7px 12px; margin-bottom: 8px; border: 1px solid #d9e2ec; border-radius: 8px; color: inherit; background: white; font: inherit; cursor: pointer; }
+#copy-status, #copy-fallback { margin-bottom: 8px; }
+#copy-fallback { display: block; width: 100%; }
