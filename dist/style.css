@@ -13,9 +13,12 @@ input::placeholder { color: #56677a; }
 .magnifier::after { content: ""; position: absolute; width: 8px; height: 2px; background: #52708a; transform: rotate(45deg); top: 12px; left: 9px; }
 ul { list-style: none; padding: 0; margin: 0; }
 #results { position: absolute; z-index: 1; inset: calc(100% + 6px) 0 auto; padding: 6px; background: white; border: 1px solid #d9e2ec; border-radius: 12px; box-shadow: 0 12px 28px #12294322; }
-#results button, #results .no-match { display: block; width: 100%; text-align: left; padding: 9px 12px; }
-#results button { font: inherit; color: inherit; border: 0; background: transparent; border-radius: 7px; cursor: pointer; }
-#results button:hover, #results button:focus { background: #edf4ff; }
+#results a, #results .no-match { display: block; width: 100%; text-align: left; padding: 9px 12px; }
+#results a { font: inherit; color: inherit; border: 0; background: transparent; border-radius: 7px; cursor: pointer; text-decoration: none; touch-action: manipulation; }
+#results a:focus-visible { background: #edf4ff; }
+@media (hover: hover) {
+  #results a:hover { background: #edf4ff; }
+}
 #results small { display: block; color: #56677a; font-size: .875rem; }
 section { border-radius: 18px; padding: clamp(16px, 4vw, 32px); }
 .panel-top, .panel-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; }

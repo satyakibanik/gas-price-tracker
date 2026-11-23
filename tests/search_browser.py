@@ -16,7 +16,7 @@ with sync_playwright() as playwright:
     search.press("Enter")
     expect(desktop.locator("#location")).to_have_text("Charlotte, NC")
     search.fill("6440")
-    desktop.get_by_role("button", name="Latham, NY · #6440", exact=False).click()
+    desktop.get_by_role("link", name="Latham, NY · #6440", exact=False).click()
     expect(desktop.locator("#location")).to_have_text("Latham, NY")
 
     if engine in devices:
@@ -25,11 +25,13 @@ with sync_playwright() as playwright:
         search = phone.get_by_role("searchbox", name="Find a fuel center")
         search.tap()
         search.fill("North Carolina")
-        result = phone.get_by_role("button", name="Charlotte, NC · #6540", exact=False)
+        result = phone.get_by_role("link", name="Charlotte, NC · #6540", exact=False)
         expect(result).to_be_visible()
         # A touch browser can blur the input without giving the button focus.
         search.blur()
-        result.tap()
+        with phone.expect_navigation():
+            result.tap()
+        expect(phone).to_have_url(url + "?club=6540")
         expect(phone.locator("#location")).to_have_text("Charlotte, NC")
         expect(phone.locator("#chart")).to_be_visible()
         expect(phone.locator("#results")).to_be_hidden()
