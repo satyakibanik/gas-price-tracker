@@ -177,7 +177,15 @@ function drawRoutes(legs) {
     const color = legColors[leg.number - 1];
     L.geoJSON(leg.direct.route, { style: { color, weight: 5 } }).addTo(layer);
     if (leg.stop) L.geoJSON(leg.stop.route, { style: { color, weight: 8, dashArray: '5 10', opacity: .65 } }).addTo(layer);
-    layers[`Leg ${leg.number}`] = layer;
+    const label = document.createElement('span');
+    label.className = 'leg-layer-name';
+    const swatch = document.createElement('span');
+    swatch.className = 'leg-layer-swatch';
+    swatch.style.backgroundColor = color;
+    swatch.setAttribute('aria-hidden', 'true');
+    label.append(swatch, `Leg ${leg.number} · ${leg.start.label} → ${leg.destination.label}`);
+    // Leaflet takes markup for this label. Serialize text nodes to keep addresses escaped.
+    layers[label.outerHTML] = layer;
     for (const station of leg.stations) {
       if (!byClub.has(station.club.id)) byClub.set(station.club.id, { ...station, legs: [] });
       byClub.get(station.club.id).legs.push({ number: leg.number, recommended: leg.stop?.club.id === station.club.id });

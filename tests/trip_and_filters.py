@@ -138,6 +138,16 @@ with sync_playwright() as playwright:
         "(paths) => paths.map(path => path.getAttribute('stroke'))"
     )
     assert len(set(route_colors)) == 2
+    control = page.locator("#trip-map .leaflet-control-layers")
+    control.locator(".leaflet-control-layers-toggle").focus()
+    first_layer = control.get_by_role("checkbox", name="Leg 1 · Start, US → Destination, US")
+    second_layer = control.get_by_role("checkbox", name="Leg 2 · Destination, US → Start, US")
+    expect(first_layer).to_be_checked()
+    expect(second_layer).to_be_checked()
+    assert first_layer.bounding_box()["width"] <= 16
+    first_layer.uncheck()
+    expect(page.locator("#trip-map .leaflet-overlay-pane path")).to_have_count(1)
+    first_layer.check()
     page.get_by_role("button", name="Copy fuel stops").click()
     expect(page.locator("#copy-status")).to_have_text("Fuel stops copied.")
     copied = page.evaluate("window.copiedFuelStops")
