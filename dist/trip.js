@@ -191,7 +191,7 @@ function drawRoutes(legs) {
       byClub.get(station.club.id).legs.push({ number: leg.number, recommended: leg.stop?.club.id === station.club.id });
     }
   }
-  if (legs.length > 1) L.control.layers({}, layers).addTo(tripMap);
+  if (legs.length > 1) L.control.layers({}, layers, { collapsed: false }).addTo(tripMap);
   const stations = [...byClub.values()];
 
   const prices = stations.flatMap(station => station.price ? [station.price.value] : []);

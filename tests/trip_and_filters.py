@@ -139,7 +139,6 @@ with sync_playwright() as playwright:
     )
     assert len(set(route_colors)) == 2
     control = page.locator("#trip-map .leaflet-control-layers")
-    control.locator(".leaflet-control-layers-toggle").hover()
     first_layer = control.locator("label").filter(has_text="Leg 1 · Start, US → Destination, US").get_by_role("checkbox")
     second_layer = control.locator("label").filter(has_text="Leg 2 · Destination, US → Start, US").get_by_role("checkbox")
     expect(first_layer).to_be_checked()
