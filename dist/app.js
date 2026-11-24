@@ -27,11 +27,11 @@ function svg(tag, attrs = {}, content = '') {
 let locations, history, selected;
 let observations = [];
 let stationGrades = [];
-const hiddenGrades = new Set();
+const selectedGrades = new Set(['unleaded']);
 
 function draw() {
   tooltip.hidden = true;
-  const visibleGrades = stationGrades.filter(([type]) => !hiddenGrades.has(type));
+  const visibleGrades = stationGrades.filter(([type]) => selectedGrades.has(type));
   if (!visibleGrades.length) return;
   const width = chart.clientWidth;
   if (width < 100) return;
@@ -136,8 +136,8 @@ function select(location) {
   legend.replaceChildren();
   stationGrades = grades.filter(([type]) =>
     observations.some(([, prices]) => Number.isFinite(prices[type])));
-  if (stationGrades.every(([type]) => hiddenGrades.has(type))) {
-    for (const [type] of stationGrades) hiddenGrades.delete(type);
+  if (stationGrades.length && !stationGrades.some(([type]) => selectedGrades.has(type))) {
+    selectedGrades.add(stationGrades[0][0]);
   }
   function updateLegend() {
     const controls = [...legend.querySelectorAll('input')];
@@ -149,11 +149,11 @@ function select(location) {
     const toggle = document.createElement('label');
     const input = document.createElement('input');
     input.type = 'checkbox';
-    input.checked = !hiddenGrades.has(type);
+    input.checked = selectedGrades.has(type);
     input.setAttribute('aria-label', label(type));
     input.addEventListener('change', () => {
-      if (input.checked) hiddenGrades.delete(type);
-      else hiddenGrades.add(type);
+      if (input.checked) selectedGrades.add(type);
+      else selectedGrades.delete(type);
       updateLegend();
       draw();
     });
