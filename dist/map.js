@@ -52,12 +52,15 @@ async function showFuelCenters() {
 
     const filters = document.getElementById('map-filters');
     const gradeInput = document.getElementById('map-grade');
+    const hasMidgrade = Object.values(records ?? {}).some(clubHistory =>
+      Object.values(clubHistory).some(prices => Number.isFinite(prices.midgrade)));
+    if (hasMidgrade) gradeInput.add(new Option('Midgrade', 'midgrade'));
     const maximumInput = document.getElementById('map-max');
     const todayInput = document.getElementById('map-today');
     const stateInputs = document.getElementById('map-states');
     const stateOf = club => club.city.split(', ').at(-1);
     const nameOf = state => stateNames[state] ?? state;
-    const renderStationTable = createStationTable(locations, today);
+    const renderStationTable = createStationTable(locations, today, hasMidgrade);
     const statesByName = [...new Set(mapped.map(stateOf))]
       .sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'en'));
     for (const state of statesByName) {
