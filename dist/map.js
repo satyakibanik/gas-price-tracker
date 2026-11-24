@@ -1,7 +1,7 @@
 import { stateNames } from './state-names.js';
 
 import { paintLegend, priceColor, priceScale } from './price-scale.js';
-import { createStationTable } from './station-table.js';
+import { createStationTable } from './station-table.js?v=available-grades';
 
 function showPopupPrices(container, history, today) {
   const latest = Object.keys(history ?? {}).sort().at(-1);
