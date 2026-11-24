@@ -1,6 +1,5 @@
 import { stateNames } from './state-names.js';
 
-const grades = ['unleaded', 'premium', 'diesel', 'midgrade'];
 const gradeName = grade => grade[0].toUpperCase() + grade.slice(1);
 const zipOf = club => club.address.match(/\b(\d{5})(?:-\d{4})?$/)?.[1];
 const dollars = price => '$' + (price / 1000).toFixed(3);
@@ -15,7 +14,9 @@ function distanceMiles(origin, club) {
   return 3958.76 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-export function createStationTable(directory, today) {
+export function createStationTable(directory, today, hasMidgrade) {
+  const grades = ['unleaded', 'premium', 'diesel'];
+  if (hasMidgrade) grades.push('midgrade');
   const section = document.querySelector('.station-list');
   const table = section.querySelector('table');
   const search = document.getElementById('station-search');

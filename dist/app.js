@@ -26,14 +26,20 @@ function svg(tag, attrs = {}, content = '') {
 
 let locations, history, selected;
 let observations = [];
+let stationGrades = [];
+const hiddenGrades = new Set();
 
 function draw() {
   tooltip.hidden = true;
-  if (!observations.length) return;
+  const visibleGrades = stationGrades.filter(([type]) => !hiddenGrades.has(type));
+  if (!visibleGrades.length) return;
   const width = chart.clientWidth;
   if (width < 100) return;
   const left = 48, right = width - 14, top = 15, bottom = 225;
-  const values = observations.flatMap(([, prices]) => Object.values(prices));
+  const visibleObservations = observations.filter(([, prices]) =>
+    visibleGrades.some(([type]) => Number.isFinite(prices[type])));
+  const values = visibleObservations.flatMap(([, prices]) =>
+    visibleGrades.map(([type]) => prices[type]).filter(Number.isFinite));
   const min = Math.min(...values), max = Math.max(...values);
   const step = [100, 250, 500, 1000, 2000, 5000, 10000].find(size => (max - min) / size <= 6) ?? 20000;
   const low = Math.max(0, Math.floor((min - step / 3) / step) * step);
@@ -52,13 +58,13 @@ function draw() {
       tooltip.hidden = true;
       return;
     }
-    const [date, prices] = observations.reduce((nearest, entry) =>
+    const [date, prices] = visibleObservations.reduce((nearest, entry) =>
       Math.abs(x(day(entry[0])) - pointerX) < Math.abs(x(day(nearest[0])) - pointerX) ? entry : nearest);
     const heading = document.createElement('strong');
     heading.textContent = dateLabel(day(date), true);
     tooltip.replaceChildren(heading);
-    for (const [type] of grades) {
-      if (prices[type] === undefined) continue;
+    for (const [type] of visibleGrades) {
+      if (!Number.isFinite(prices[type])) continue;
       const row = document.createElement('div');
       row.textContent = label(type) + ' ' + money(prices[type]);
       tooltip.append(row);
@@ -77,10 +83,11 @@ function draw() {
     if (event.pointerType !== 'touch') tooltip.hidden = true;
   };
   chart.onpointercancel = () => { tooltip.hidden = true; };
-  const details = observations.map(([date, prices]) =>
-    dateLabel(day(date), true) + ', ' + grades.filter(([type]) => prices[type] !== undefined)
-      .map(([type]) => label(type) + ' ' + money(prices[type])).join(', '));
-  chart.setAttribute('aria-label', 'Recorded prices in US dollars per gallon. Latest observation: ' + details.at(-1));
+  const [latestDate, latestPrices] = visibleObservations.at(-1);
+  const details = visibleGrades.filter(([type]) => Number.isFinite(latestPrices[type]))
+    .map(([type]) => label(type) + ' ' + money(latestPrices[type]));
+  chart.setAttribute('aria-label', 'Recorded prices in US dollars per gallon. Latest observation: ' +
+    [dateLabel(day(latestDate), true), ...details].join(', '));
   for (let tick = low; tick <= high; tick += step) {
     chart.append(svg('line', { x1: left, x2: right, y1: y(tick), y2: y(tick), stroke: '#e1e8f0' }));
     chart.append(svg('text', { x: left - 8, y: y(tick) + 4, 'text-anchor': 'end', fill: 'currentColor' }, '$' + (tick / 1000).toFixed(2)));
@@ -91,10 +98,10 @@ function draw() {
     const align = labels === 1 ? 'middle' : index === 0 ? 'start' : index === labels - 1 ? 'end' : 'middle';
     chart.append(svg('text', { x: x(date), y: 247, 'text-anchor': align, fill: 'currentColor' }, dateLabel(date)));
   }
-  for (const [type, color] of grades) {
+  for (const [type, color] of visibleGrades) {
     let previous;
     for (const [date, prices] of observations) {
-      if (prices[type] === undefined) { previous = undefined; continue; }
+      if (!Number.isFinite(prices[type])) { previous = undefined; continue; }
       const point = { day: day(date), price: prices[type] };
       if (previous && point.day === previous.day + 1) {
         chart.append(svg('line', { x1: x(previous.day), y1: y(previous.price), x2: x(point.day), y2: y(point.price), stroke: color, 'stroke-width': 2 }));
@@ -125,19 +132,43 @@ function select(location) {
   byId('address').textContent = location.address;
   byId('count').textContent = latest ? `Latest · ${dateLabel(day(latest[0]), true)}` : '';
   byId('source').href = latest || location.publishedFuelPage ? location.url : location.clubUrl;
-  byId('legend').replaceChildren();
-  for (const [type, color] of grades) {
-    if (latest?.[1][type] === undefined) continue;
+  const legend = byId('legend');
+  legend.replaceChildren();
+  stationGrades = grades.filter(([type]) =>
+    observations.some(([, prices]) => Number.isFinite(prices[type])));
+  if (stationGrades.every(([type]) => hiddenGrades.has(type))) {
+    for (const [type] of stationGrades) hiddenGrades.delete(type);
+  }
+  function updateLegend() {
+    const controls = [...legend.querySelectorAll('input')];
+    const chosen = controls.filter(control => control.checked);
+    for (const control of controls) control.disabled = control.checked && chosen.length === 1;
+  }
+  for (const [type, color] of stationGrades) {
     const item = document.createElement('li');
+    const toggle = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = !hiddenGrades.has(type);
+    input.setAttribute('aria-label', label(type));
+    input.addEventListener('change', () => {
+      if (input.checked) hiddenGrades.delete(type);
+      else hiddenGrades.add(type);
+      updateLegend();
+      draw();
+    });
     const swatch = document.createElement('span');
     swatch.className = 'swatch';
     swatch.style.setProperty('--color', color);
     swatch.setAttribute('aria-hidden', 'true');
     const price = document.createElement('strong');
-    price.textContent = money(latest[1][type]);
-    item.append(swatch, label(type), price);
-    byId('legend').append(item);
+    const [, latestForGrade] = observations.findLast(([, prices]) => Number.isFinite(prices[type]));
+    price.textContent = money(latestForGrade[type]);
+    toggle.append(input, swatch, label(type), price);
+    item.append(toggle);
+    legend.append(item);
   }
+  updateLegend();
   chart.hidden = !latest;
   byId('empty').hidden = Boolean(latest);
   byId('panel').hidden = false;
