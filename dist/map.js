@@ -1,6 +1,7 @@
 import { stateNames } from './state-names.js';
 
 import { paintLegend, priceColor, priceScale } from './price-scale.js';
+import { createStationTable } from './station-table.js';
 
 function showPopupPrices(container, history, today) {
   const latest = Object.keys(history ?? {}).sort().at(-1);
@@ -56,6 +57,7 @@ async function showFuelCenters() {
     const stateInputs = document.getElementById('map-states');
     const stateOf = club => club.city.split(', ').at(-1);
     const nameOf = state => stateNames[state] ?? state;
+    const renderStationTable = createStationTable(locations, today);
     const statesByName = [...new Set(mapped.map(stateOf))]
       .sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'en'));
     for (const state of statesByName) {
@@ -126,7 +128,7 @@ async function showFuelCenters() {
           marker.remove();
           continue;
         }
-        visible.push({ pin, price });
+        visible.push({ pin, price, date: hasPrice ? date : undefined });
       }
       const scale = priceScale(visible.map(item => item.price).filter(Number.isFinite), maximum);
       for (const { pin, price } of visible) {
@@ -135,6 +137,7 @@ async function showFuelCenters() {
         element.setAttribute('aria-label', pin.club.address);
       }
       paintLegend(legendContent, gradeInput.selectedOptions[0].textContent, scale, visible.some(item => !Number.isFinite(item.price)));
+      renderStationTable(visible, grade, todayInput.checked);
       if (visible.length) {
         status.textContent = `${visible.length} of ${fuelCenters.length} fuel centers on the map`;
       } else if (!records) {
