@@ -43,7 +43,8 @@ function draw() {
   const y = price => bottom - (price - low) * (bottom - top) / (high - low);
   chart.setAttribute('viewBox', `0 0 ${width} 264`);
   chart.replaceChildren();
-  chart.onpointermove = event => {
+  const showTooltip = event => {
+    if (!event.isPrimary) return;
     const bounds = chart.getBoundingClientRect();
     const pointerX = event.clientX - bounds.left;
     const pointerY = event.clientY - bounds.top;
@@ -66,7 +67,16 @@ function draw() {
     tooltip.style.left = Math.max(0, Math.min(width - tooltip.offsetWidth, pointerX + 12)) + 'px';
     tooltip.style.top = Math.max(0, pointerY - tooltip.offsetHeight - 10) + 'px';
   };
-  chart.onpointerleave = () => { tooltip.hidden = true; };
+  chart.onpointermove = showTooltip;
+  chart.onpointerdown = event => {
+    if (event.pointerType !== 'touch' || !event.isPrimary) return;
+    chart.setPointerCapture(event.pointerId);
+    showTooltip(event);
+  };
+  chart.onpointerleave = event => {
+    if (event.pointerType !== 'touch') tooltip.hidden = true;
+  };
+  chart.onpointercancel = () => { tooltip.hidden = true; };
   const details = observations.map(([date, prices]) =>
     dateLabel(day(date), true) + ', ' + grades.filter(([type]) => prices[type] !== undefined)
       .map(([type]) => label(type) + ' ' + money(prices[type])).join(', '));
@@ -100,6 +110,10 @@ function closeResults() {
   results.hidden = true;
   search.setAttribute('aria-expanded', 'false');
 }
+
+document.addEventListener('pointerdown', event => {
+  if (!chart.contains(event.target)) tooltip.hidden = true;
+});
 
 function select(location) {
   selected = location;
