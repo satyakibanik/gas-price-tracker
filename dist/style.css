@@ -131,3 +131,5 @@ a { color: #1254af; text-underline-offset: 3px; }
 .station-table td:first-child { min-width: 15rem; }
 .station-directions { display: block; width: fit-content; margin-top: 2px; }
 .station-table td:not(:first-child) { white-space: nowrap; }
+
+.site-footer { padding: 0 24px 24px; text-align: center; font-size: .875rem; }
