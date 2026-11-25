@@ -1,7 +1,7 @@
 import { stateNames } from './state-names.js';
 
 import { paintLegend, priceColor, priceScale } from './price-scale.js';
-import { createStationTable } from './station-table.js?v=available-grades';
+import { createStationTable } from './station-table.js?v=shared-filters';
 
 function showPopupPrices(container, history, today) {
   const latest = Object.keys(history ?? {}).sort().at(-1);
@@ -60,7 +60,7 @@ async function showFuelCenters() {
     const stateInputs = document.getElementById('map-states');
     const stateOf = club => club.city.split(', ').at(-1);
     const nameOf = state => stateNames[state] ?? state;
-    const renderStationTable = createStationTable(locations, today, hasMidgrade);
+    const renderStationTable = createStationTable(locations, today, hasMidgrade, renderFilters);
     const statesByName = [...new Set(mapped.map(stateOf))]
       .sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'en'));
     for (const state of statesByName) {
@@ -119,19 +119,23 @@ async function showFuelCenters() {
       const states = new Set(Array.from(stateInputs.querySelectorAll(':checked'), input => input.value));
       document.getElementById('map-state-summary').textContent = states.size
         ? `States and territories (${states.size})` : 'States and territories';
-      const visible = [];
+      const candidates = [];
       for (const pin of pins) {
-        const { club, clubHistory, marker } = pin;
+        const { club, clubHistory } = pin;
         const date = todayInput.checked ? today : Object.keys(clubHistory).sort().reverse()
           .find(day => Number.isFinite(clubHistory[day][grade]));
         const price = clubHistory[date]?.[grade];
         const hasPrice = Number.isFinite(price);
         if ((states.size && !states.has(stateOf(club))) ||
             ((todayInput.checked || maximum !== Infinity) && (!hasPrice || price > maximum))) {
-          marker.remove();
           continue;
         }
-        visible.push({ pin, price, date: hasPrice ? date : undefined });
+        candidates.push({ pin, price, date: hasPrice ? date : undefined });
+      }
+      const visible = renderStationTable(candidates, grade, todayInput.checked);
+      const visiblePins = new Set(visible.map(({ pin }) => pin));
+      for (const pin of pins) {
+        if (!visiblePins.has(pin)) pin.marker.remove();
       }
       const scale = priceScale(visible.map(item => item.price).filter(Number.isFinite), maximum);
       for (const { pin, price } of visible) {
@@ -140,7 +144,6 @@ async function showFuelCenters() {
         element.setAttribute('aria-label', pin.club.address);
       }
       paintLegend(legendContent, gradeInput.selectedOptions[0].textContent, scale, visible.some(item => !Number.isFinite(item.price)));
-      renderStationTable(visible, grade, todayInput.checked);
       if (visible.length) {
         status.textContent = `${visible.length} of ${fuelCenters.length} fuel centers on the map`;
       } else if (!records) {

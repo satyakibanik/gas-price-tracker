@@ -14,7 +14,7 @@ function distanceMiles(origin, club) {
   return 3958.76 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-export function createStationTable(directory, today, hasMidgrade) {
+export function createStationTable(directory, today, hasMidgrade, refreshFilters) {
   const grades = ['unleaded', 'premium', 'diesel'];
   if (hasMidgrade) grades.push('midgrade');
   const section = document.querySelector('.station-list');
@@ -60,7 +60,8 @@ export function createStationTable(directory, today, hasMidgrade) {
       input.min = '0';
       input.step = column.limit === 1000 ? '0.001' : 'any';
     }
-    input.addEventListener('input', render);
+    input.setAttribute('form', 'map-filters');
+    input.addEventListener('input', refreshFilters);
     filters.insertCell().append(input);
     Object.assign(column, { header, button, input });
   }
@@ -96,7 +97,7 @@ export function createStationTable(directory, today, hasMidgrade) {
       }
     }
     count.textContent = matches.length ? `${matches.length} of ${rows.length} stations · Prices per gallon`
-      : 'No stations match the table filters.';
+      : 'No stations match the selected filters.';
     const body = document.createDocumentFragment();
     for (const row of matches) {
       const tr = document.createElement('tr');
@@ -127,24 +128,18 @@ export function createStationTable(directory, today, hasMidgrade) {
       body.append(tr);
     }
     table.tBodies[0].replaceChildren(body);
+    return matches.map(row => row.station);
   }
 
   function setOrigin(coordinates, message) {
     origin = coordinates;
     sort = origin ? 'distance' : 'location';
     direction = 1;
-    for (const row of rows) row.distance = origin ? distanceMiles(origin, row.club) : undefined;
     nearbyMessage.textContent = message;
     clearLocation.hidden = !origin;
-    render();
+    refreshFilters();
   }
 
-  search.addEventListener('input', render);
-  document.getElementById('station-clear').addEventListener('click', () => {
-    search.value = '';
-    for (const { input } of columns) input.value = '';
-    render();
-  });
   document.getElementById('nearby-form').addEventListener('submit', event => {
     event.preventDefault();
     locationRequest++;
@@ -177,14 +172,15 @@ export function createStationTable(directory, today, hasMidgrade) {
   });
 
   section.hidden = false;
-  return (visible, grade, todayOnly) => {
+  return (candidates, grade, todayOnly) => {
     const priceColumn = columns.find(({ key }) => key === 'price');
     priceColumn.label = `${gradeName(grade)} price / gal`;
     priceColumn.button.textContent = priceColumn.label;
-    rows = visible.map(({ pin: { club, clubHistory }, price, date }) => {
+    rows = candidates.map(station => {
+      const { pin: { club, clubHistory }, price, date } = station;
       const stateCode = club.city.split(', ').at(-1);
       const row = {
-        club, location: club.address, stateCode, state: stateNames[stateCode] ?? stateCode,
+        station, club, location: club.address, stateCode, state: stateNames[stateCode] ?? stateCode,
         zip: zipOf(club), price, date, distance: origin ? distanceMiles(origin, club) : undefined,
         gradeDates: {},
       };
@@ -196,6 +192,6 @@ export function createStationTable(directory, today, hasMidgrade) {
       }
       return row;
     });
-    render();
+    return render();
   };
 }
