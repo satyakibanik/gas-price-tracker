@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="style.css?v=station-table">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
-  <script type="module" src="map.js?v=available-grades"></script>
+  <script type="module" src="map.js?v=shared-filters"></script>
   <script defer src="price-update.js"></script>
 </head>
 <body>
@@ -20,6 +20,9 @@
     </nav>
     <p class="price-update" id="price-update">Price update time unavailable</p>
     <form id="map-filters" class="map-filters" aria-label="Filter fuel centers">
+      <label>Search stations
+        <input id="station-search" type="search" placeholder="City, address, ZIP, state, or club">
+      </label>
       <label>Fuel grade
         <select id="map-grade"><option value="unleaded">Unleaded</option><option value="premium">Premium</option><option value="diesel">Diesel</option></select>
       </label>
@@ -46,12 +49,6 @@
         <button type="button" id="nearby-clear" hidden>Clear location</button>
       </form>
       <p id="nearby-message" aria-live="polite"></p>
-      <div class="station-controls">
-        <label>Search stations
-          <input id="station-search" type="search" placeholder="City, address, ZIP, state, or club">
-        </label>
-        <button type="button" id="station-clear">Clear table filters</button>
-      </div>
       <p id="station-count" aria-live="polite"></p>
       <div class="station-table-scroll" role="region" aria-label="Fuel center table" tabindex="0">
         <table class="station-table" aria-label="Fuel centers shown on the map">
