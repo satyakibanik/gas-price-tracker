@@ -3,6 +3,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from playwright.sync_api import expect, sync_playwright
@@ -31,10 +32,11 @@ def simulate_routing(route):
     if request.method == "OPTIONS":
         route.fulfill(status=204, headers=headers)
         return
-    if "/geocode/" in request.url:
+    path = urlsplit(request.url).path
+    if path == "/pelias/v1/search" and request.method == "GET":
         index = int("Destination" in request.url)
         feature = {"geometry": {"coordinates": coordinates[index]}, "properties": {"label": ["Start, US", "Destination, US"][index]}}
-    else:
+    elif path == "/openrouteservice/v2/directions/driving-car/geojson" and request.method == "POST":
         points = request.post_data_json["coordinates"]
         extra = 0 if len(points) == 2 else (300 if points[1][0] == route_clubs[0]["longitude"] else 900)
         feature = {
@@ -42,6 +44,9 @@ def simulate_routing(route):
             "geometry": {"type": "LineString", "coordinates": [points[0], *(corridor_points if points[0] == coordinates[0] else corridor_points[::-1]), points[-1]] if len(points) == 2 else points},
             "properties": {"summary": {"duration": 3600 + extra, "distance": 100000 + extra * 10}},
         }
+    else:
+        route.fulfill(status=404, headers=headers)
+        return
     route.fulfill(json={"features": [feature]}, headers=headers)
 
 
@@ -75,7 +80,7 @@ with sync_playwright() as playwright:
     expect(markers).to_have_count(nc_count)
 
     page.route("**/locations.json", lambda route: route.fulfill(json=[*route_clubs, off_route]))
-    page.route("https://api.openrouteservice.org/**", simulate_routing)
+    page.route("https://api.heigit.org/**", simulate_routing)
     page.goto(url + "trip.html")
     detour = page.get_by_label("Maximum extra driving minutes")
     expect(detour).to_have_value("60")
