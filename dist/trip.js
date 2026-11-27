@@ -1,6 +1,6 @@
 import { paintLegend, priceColor, priceLabel, priceScale } from './price-scale.js';
 
-const api = 'https://api.openrouteservice.org';
+const api = 'https://api.heigit.org';
 const routeCorridorMiles = 10;
 const form = document.getElementById('trip-form');
 const status = document.getElementById('trip-status');
@@ -55,14 +55,14 @@ async function readJson(url, options) {
 
 async function geocode(query, key) {
   const params = new URLSearchParams({ text: query, size: '1', 'boundary.country': 'US,PR' });
-  const data = await readJson(api + '/geocode/search?' + params, { headers: { Authorization: key } });
+  const data = await readJson(api + '/pelias/v1/search?' + params, { headers: { Authorization: key } });
   const place = data.features[0];
   if (!place) throw new Error('No match for ' + query + '. Try a full street address.');
   return { coordinates: place.geometry.coordinates, label: place.properties.label };
 }
 
 async function directions(coordinates, key) {
-  const data = await readJson(api + '/v2/directions/driving-car/geojson', {
+  const data = await readJson(api + '/openrouteservice/v2/directions/driving-car/geojson', {
     method: 'POST',
     headers: { Authorization: key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ coordinates }),
